@@ -1,0 +1,1 @@
+cmd_/home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.o := ld -m elf_x86_64    -r -o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr-main.o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr-io.o

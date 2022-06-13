@@ -1,0 +1,1 @@
+cmd_/home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.ko := ld -r -m elf_x86_64  --build-id=sha1  -T scripts/module.lds -o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.ko /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.mod.o;  true
