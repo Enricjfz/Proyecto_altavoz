@@ -11,6 +11,7 @@
 #include <asm/uaccess.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
+#include <linux/timer.h>
 
 
 MODULE_LICENSE("Dual BSD/GPL");
@@ -32,8 +33,15 @@ struct info_dispo {
 
 typedef struct {
   char sonido [4];
-	int datos_copiados;
+  int datos_copiados;
 } PrivateData;
+
+struct timer_list {
+        unsigned long expires;
+        void (*function)(unsigned long);
+        unsigned long data;
+};
+struct timer_list tl;
 
 module_param(firstminor, int, S_IRUGO);
 
@@ -62,53 +70,54 @@ static int seq_release(struct inode *inode, struct file *filp) {
 		printk(KERN_ALERT "seq_release\n");
 		return 0;
 }
+
+//Funcion auxiliar que programa el temporizador y duerme al proceso
+static void scheduleSound (char sonido []){
+    int freq = (sonido[0] << 8) | sonido[1];
+	int dur = (sonido[2] << 8) | sonido[3];
+    tl.expires =  jiffies + msecs_to_jiffies(dur);
+    add_timer(&tl);
+
+
+} 
+
 static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 	  printk(KERN_ALERT "seq_write\n"); //Depurar
 		// buff argument to the read and write methods is a user-space pointer
 		// count is the number size of data to transfer
-    //inicializamos el buffer donde se va a escribir en el kernel
-		/*
-      Cada 4 bytes que se escriben en el dispositivo definen un sonido:
-			los dos primeros bytes especifican la frecuencia, mientras que los dos siguientes determinan la duración
-			de ese sonido en milisegundos. Completada esa duración, el altavoz se desactivará, a no ser que haya más
-			sonidos pendientes de generarse formando parte del mismo write. Un sonido con un valor de frecuencia de 0
-			corresponderá a desactivar el altavoz durante la duración indicada (se trata de un silencio o pausa en la
-			secuencia de sonidos). Por otro lado, dado que un sonido con una duración de 0 no tendrá ningún efecto,
-			se podrá implementar como se considere oportuno siempre que tenga ese comportamiento nulo.
-			Asimismo, téngase en cuenta que una única operación de escritura puede incluir numerosos sonidos
-			(así, por ejemplo, un write de 4KiB incluiría 1024 sonidos), que se ejecutarán como una secuencia.
-			Nótese que si el manejador recibe en una escritura un número de bytes que no es múltiplo de 4,
-			habrá un sonido incompleto final, que habrá que guardar hasta que una escritura posterior lo complete.
-		*/
-		int copy;
-		size_t datos_a_escribir;
-		PrivateData *privateData = (PrivateData *)(filp -> private_data);
-		int datos_no_copiados;
-		mutex_lock(&write);
-		copy = 0;
-		while (count > copy)
-		{
-      datos_a_escribir = privateData -> datos_copiados%4;
-      if((count - copy) < datos_a_escribir)
-			{
-        datos_a_escribir = count - copy;
 
-			}
-		  datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir);
+		int copy; //datos copiados
+		size_t datos_a_escribir; //bytes que se escriben
+		PrivateData *privateData = (PrivateData *)(filp -> private_data); //struct de sonido
+		int datos_no_copiados;
+		mutex_lock(&write); //exclusion mutua threads
+		copy = 0;
+		while (count > copy) //mientras haya mas datos en el buffer de los escritos
+		{
+            datos_a_escribir = privateData -> datos_copiados%4; //vemos que hay previamente sin enviar{0 ,1 , 2 , 3} 
+            if((count - copy) < datos_a_escribir)
+			  {
+                 datos_a_escribir = count - copy; // hay menos datos en el buffer que los que hay en el struct
+
+			  }
+		    datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir);
 			if (datos_no_copiados > 0)
 			{
-         return -EFAULT;
+                     return -EFAULT;
 			}
 			copy += datos_a_escribir;
 			privateData->datos_copiados += datos_a_escribir;
-			if(privateData->datos_copiados%4 == 0)
+			if(privateData->datos_copiados%4 == 0) //hay un sonido disponible
 			{
+                //se llama a función sonido y se bloquea proceso
+				scheduleSound(privateData->sonido);
 				privateData->datos_copiados = 0;
-				//se llama a función sonido
+				
+
 			}
 		}
 		mutex_unlock(&write);
-    return 0;
+        return 0;
 }
 
 static ssize_t seq_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {

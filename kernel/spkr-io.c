@@ -13,17 +13,17 @@
 
 void set_spkr_frequency(unsigned int frequency) {
     uint32_t Div;
-		uint8_t tmp;
+	uint8_t tmp;
 
-		Div = PIT_TICK_RATE / frequency;
-		outb(REGISTRO_CONTROL, 0xb6);
-		outb(REGISTRO_DATOS, (uint8_t) (Div));
-		outb(REGISTRO_DATOS, (uint8_t) (Div >> 8));
+	Div = PIT_TICK_RATE / frequency;
+	outb(REGISTRO_CONTROL, 0xb6);
+	outb(REGISTRO_DATOS, (uint8_t) (Div));
+	outb(REGISTRO_DATOS, (uint8_t) (Div >> 8));
 
-		tmp = inb(0x61);
-		if(tmp != (tmp | 3)){
+	tmp = inb(0x61);
+	if(tmp != (tmp | 3)){
 			outb(PUERTO_B, tmp | 3);
-		}
+	}
 
 
 }
