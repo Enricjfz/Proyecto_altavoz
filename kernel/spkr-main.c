@@ -43,6 +43,8 @@ struct timer_list {
 };
 struct timer_list tl;
 
+static int condition = 0;
+
 module_param(firstminor, int, S_IRUGO);
 
 static int seq_open(struct inode *inode, struct file *filp) {
@@ -71,14 +73,24 @@ static int seq_release(struct inode *inode, struct file *filp) {
 		return 0;
 }
 
+//metodo que desbloquea a todos los procesos dormidos por la escritura del sonido
+static void unlockProc (struct  timer_list *tl){
+   wake_up_interruptible(&info.lista_bloq);
+
+} 
+
 //Funcion auxiliar que programa el temporizador y duerme al proceso
 static void scheduleSound (char sonido []){
     int freq = (sonido[0] << 8) | sonido[1];
 	int dur = (sonido[2] << 8) | sonido[3];
     tl.expires =  jiffies + msecs_to_jiffies(dur);
+	tl.function = (void (*unlockProc)(struct timer_list *))
     add_timer(&tl);
-
-
+    int block = wait_event_interruptible(info.lista_bloq, condition != 0);
+	if (block != 0){
+		printk(KERN_ALERT "-ERESTARTSYS\n");
+		return -ERESTARTSYS;
+	} 
 } 
 
 static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
@@ -163,12 +175,12 @@ static int __init spkr_init(void) {
 
 
 static void __exit spkr_exit(void) {
-	device_destroy(module_class,devID);
+  device_destroy(module_class,devID);
   class_destroy(module_class);
   cdev_del(&c);
   unregister_chrdev_region(devID,count);
-	mutex_destroy(&open);
-	mutex_destroy(&write);
+  mutex_destroy(&open);
+  mutex_destroy(&write);
   printk(KERN_ALERT "salida_exit\n");
 }
 
