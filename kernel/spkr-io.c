@@ -3,11 +3,9 @@
 #include <linux/version.h>
 #include <linux/i8253.h>
 #include <asm/io.h>
+#include "spkr-io.h"
 
 
-#define REGISTRO_CONTROL 0x43
-#define REGISTRO_DATOS 0x42
-#define PUERTO_B 0x61
 
 //se activa los dos ultimos bytes del puerto B
 void spkr_on(void) {
@@ -32,12 +30,13 @@ void set_spkr_frequency(unsigned int frequency) {
 	uint8_t tmp;
     unsigned long flags;
 	Div = PIT_TICK_RATE / frequency;
+	spkr_on();
 	raw_spin_lock_irqsave(&i8253_lock, flags);
 	outb(0xb6,REGISTRO_CONTROL);
 	outb((uint8_t) (Div),REGISTRO_DATOS);
 	outb((uint8_t) (Div >> 8),REGISTRO_DATOS);
 	raw_spin_unlock_irqrestore(&i8253_lock, flags);
-    
+    spkr_off();
 	/*
 	tmp = inb(0x61);
 	if(tmp != (tmp | 3)){

@@ -1,1 +1,1 @@
-cmd_/home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.mod := { echo  /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr-main.o /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr-io.o;  echo; } > /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.mod
+cmd_/home/upm/Escritorio/Proyecto_altavoz/kernel/spkr.mod := { echo  /home/upm/Escritorio/Proyecto_altavoz/kernel/spkr-main.o /home/upm/Escritorio/Proyecto_altavoz/kernel/spkr-io.o;  echo; } > /home/upm/Escritorio/Proyecto_altavoz/kernel/spkr.mod

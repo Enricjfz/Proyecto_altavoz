@@ -1,1 +1,1 @@
-cmd_/home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/modules.order := {   echo /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/spkr.ko; :; } | awk '!x[$$0]++' - > /home/enrique/Desktop/proyecto_altavoz/SEU/proyecto_altavoz/kernel/modules.order
+cmd_/home/upm/Escritorio/Proyecto_altavoz/kernel/modules.order := {   echo /home/upm/Escritorio/Proyecto_altavoz/kernel/spkr.ko; :; } | awk '!x[$$0]++' - > /home/upm/Escritorio/Proyecto_altavoz/kernel/modules.order

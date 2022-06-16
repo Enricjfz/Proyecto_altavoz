@@ -12,6 +12,8 @@
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/timer.h>
+#include "spkr-io.h"
+
 
 
 MODULE_LICENSE("Dual BSD/GPL");
@@ -26,6 +28,7 @@ const char *fmt = "intspkr";
 struct class * module_class;
 struct mutex open;
 struct mutex write;
+spinlock_t lock;
 // declaración de una variable dentro de una estructura
 struct info_dispo {
 		 wait_queue_head_t lista_bloq;
@@ -36,11 +39,13 @@ typedef struct {
   int datos_copiados;
 } PrivateData;
 
+/*
 struct timer_list {
         unsigned long expires;
         void (*function)(unsigned long);
         unsigned long data;
 };
+*/
 struct timer_list tl;
 
 static int condition = 0;
@@ -75,22 +80,28 @@ static int seq_release(struct inode *inode, struct file *filp) {
 
 //metodo que desbloquea a todos los procesos dormidos por la escritura del sonido
 static void unlockProc (struct  timer_list *tl){
+   spin_lock_bh(&lock);
    wake_up_interruptible(&info.lista_bloq);
-
+   spin_unlock_bh(&lock);
 } 
 
 //Funcion auxiliar que programa el temporizador y duerme al proceso
-static void scheduleSound (char sonido []){
-    int freq = (sonido[0] << 8) | sonido[1];
-	int dur = (sonido[2] << 8) | sonido[3];
+static int scheduleSound (char sonido []){
+	int block, freq, dur;
+    freq = (sonido[0] << 8) | sonido[1];
+	dur = (sonido[2] << 8) | sonido[3];
+	spin_lock_bh(&lock);
+	set_spkr_frequency(freq);
     tl.expires =  jiffies + msecs_to_jiffies(dur);
-	tl.function = (void (*unlockProc)(struct timer_list *))
+	tl.function = unlockProc;
     add_timer(&tl);
-    int block = wait_event_interruptible(info.lista_bloq, condition != 0);
+    block = wait_event_interruptible(info.lista_bloq, condition != 0);
+	spin_unlock_bh(&lock);
 	if (block != 0){
 		printk(KERN_ALERT "-ERESTARTSYS\n");
 		return -ERESTARTSYS;
 	} 
+	return 1;
 } 
 
 static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
@@ -169,6 +180,7 @@ static int __init spkr_init(void) {
 	init_waitqueue_head(&info.lista_bloq);
 	mutex_init(&open);
 	mutex_init(&write);
+	spin_lock_init(&lock);
 
 	return 0;
 }
