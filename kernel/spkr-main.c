@@ -29,6 +29,7 @@ struct class * module_class;
 struct mutex open;
 struct mutex write;
 spinlock_t lock;
+int write_proc = 0;
 // declaración de una variable dentro de una estructura
 struct info_dispo {
 		 wait_queue_head_t lista_bloq;
@@ -58,13 +59,19 @@ static int seq_open(struct inode *inode, struct file *filp) {
 		 Si un proceso lo abre en modo escritura, estando ya en modo escritura por otro usuario -> error
 		 Si un proceso lo abre en modo lectura, estando ya en modo escritura por otro usuario -> no pasa nada
 	*/
-    if(filp->f_mode & FMODE_WRITE)
+    if(filp->f_mode & FMODE_WRITE) {
+		if(write_proc == 1)
 		{
-        mutex_lock(&open);
-        printk(KERN_ALERT "-EBUSY\n");
-				return -EBUSY;
+	         printk(KERN_ALERT "-EBUSY\n");
+			return -EBUSY;
 		}
-		filp->private_data = kmalloc(sizeof(PrivateData), GFP_KERNEL);
+		else {
+			mutex_lock(&open);
+            write_proc = 1;
+			printk(KERN_ALERT "PROCESO ESCRITURA\n");
+		}
+	}
+	filp->private_data = kmalloc(sizeof(PrivateData), GFP_KERNEL);
     ((PrivateData *)(filp->private_data))->datos_copiados = 0;
     return 0;
 }
@@ -72,8 +79,11 @@ static int seq_open(struct inode *inode, struct file *filp) {
 static int seq_release(struct inode *inode, struct file *filp) {
     if(filp -> f_mode & FMODE_WRITE)
 		{
-			mutex_unlock(&open); //liberamos el mutex
+		//se permite escribir a otro proceso
+		 write_proc = 0;	
+		 mutex_unlock(&open); //liberamos el mutex
 		}
+		kfree(filp->private_data);
 		printk(KERN_ALERT "seq_release\n");
 		return 0;
 }
@@ -144,7 +154,7 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 }
 
 static ssize_t seq_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {
-	  printk(KERN_ALERT "seq_read\n");
+	  printk(KERN_ALERT "seq_read --no hace nada --\n");
     return 0;
 }
 

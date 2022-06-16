@@ -1,1 +1,1 @@
-cmd_/home/upm/Escritorio/Proyecto_altavoz/kernel/Module.symvers := sed 's/\.ko$$/\.o/' /home/upm/Escritorio/Proyecto_altavoz/kernel/modules.order | scripts/mod/modpost -m -a  -o /home/upm/Escritorio/Proyecto_altavoz/kernel/Module.symvers -e -i Module.symvers   -T -
+cmd_/home/enrique/Desktop/Proyecto_altavoz/kernel/Module.symvers := sed 's/\.ko$$/\.o/' /home/enrique/Desktop/Proyecto_altavoz/kernel/modules.order | scripts/mod/modpost -m -a  -o /home/enrique/Desktop/Proyecto_altavoz/kernel/Module.symvers -e -i Module.symvers   -T -
