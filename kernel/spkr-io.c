@@ -26,17 +26,19 @@ void spkr_off(void) {
 
 //funcion que dada una frecuencia escribe ese valor en el dispositivo
 void set_spkr_frequency(unsigned int frequency) {
-    uint32_t Div;
+    uint16_t Div;
 	uint8_t tmp;
     unsigned long flags;
+	printk(KERN_ALERT "inicio set frequency \n");
 	Div = PIT_TICK_RATE / frequency;
-	spkr_on();
+	spkr_on(); //posible cambio
 	raw_spin_lock_irqsave(&i8253_lock, flags);
-	outb(0xb6,REGISTRO_CONTROL);
+	outb(0xB6,REGISTRO_CONTROL); // 0x10110110 -> Channel 2, lobyte/hibyte, Mode 3,16 bits binary
 	outb((uint8_t) (Div),REGISTRO_DATOS);
 	outb((uint8_t) (Div >> 8),REGISTRO_DATOS);
 	raw_spin_unlock_irqrestore(&i8253_lock, flags);
     spkr_off();
+	printk(KERN_ALERT "fin set frequency \n");
 	/*
 	tmp = inb(0x61);
 	if(tmp != (tmp | 3)){

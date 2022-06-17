@@ -100,6 +100,7 @@ static int scheduleSound (char sonido []){
 	int block, freq, dur;
     freq = (sonido[0] << 8) | sonido[1];
 	dur = (sonido[2] << 8) | sonido[3];
+	printk(KERN_ALERT "Sonido, duracion: %d frequencia: %d\n",dur,freq);
 	spin_lock_bh(&lock);
 	set_spkr_frequency(freq);
     tl.expires =  jiffies + msecs_to_jiffies(dur);
@@ -120,19 +121,37 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 		// count is the number size of data to transfer
 
 		int copy; //datos copiados
-		size_t datos_a_escribir; //bytes que se escriben
+		int datos_a_escribir; //bytes que se escriben
 		PrivateData *privateData = (PrivateData *)(filp -> private_data); //struct de sonido
 		int datos_no_copiados;
 		mutex_lock(&write); //exclusion mutua threads
 		copy = 0;
 		while (count > copy) //mientras haya mas datos en el buffer de los escritos
 		{
-            datos_a_escribir = privateData -> datos_copiados%4; //vemos que hay previamente sin enviar{0 ,1 , 2 , 3} 
-            if((count - copy) < datos_a_escribir)
-			  {
-                 datos_a_escribir = count - copy; // hay menos datos en el buffer que los que hay en el struct
+            if(privateData->datos_copiados != 0)
+			{
+              //hay bytes previos copiados
+			  int bytes_sonidos = count - copy;
+			  if(bytes_sonidos + privateData->datos_copiados > 4) {
+				//los bytes del buffer del usuario y los guardados suman mas de un sonido
+				datos_a_escribir = 4 - privateData->datos_copiados;
 
 			  }
+			  else {
+
+				datos_a_escribir = bytes_sonidos;
+			  }
+
+			}
+			else {
+				int bytes_sonidos = count - copy;
+				if(bytes_sonidos >= 4){
+					datos_a_escribir = 4;
+				}
+				else {
+					datos_a_escribir = count - copy;
+				}
+			}
 		    datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir);
 			if (datos_no_copiados > 0)
 			{
@@ -142,6 +161,7 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 			privateData->datos_copiados += datos_a_escribir;
 			if(privateData->datos_copiados%4 == 0) //hay un sonido disponible
 			{
+				printk(KERN_ALERT "se escribe en el dispositivo 4 bytes \n");
                 //se llama a función sonido y se bloquea proceso
 				scheduleSound(privateData->sonido);
 				privateData->datos_copiados = 0;
