@@ -92,6 +92,7 @@ static int seq_release(struct inode *inode, struct file *filp) {
 static void unlockProc (struct  timer_list *tl){
    spin_lock_bh(&lock);
    wake_up_interruptible(&info.lista_bloq);
+   spkr_off();
    spin_unlock_bh(&lock);
 } 
 
@@ -102,7 +103,11 @@ static int scheduleSound (char sonido []){
 	dur = (sonido[2] << 8) | sonido[3];
 	printk(KERN_ALERT "Sonido, duracion: %d frequencia: %d\n",dur,freq);
 	spin_lock_bh(&lock);
-	set_spkr_frequency(freq);
+	if(freq > 0)
+	{
+	   set_spkr_frequency(freq);
+	   spkr_on();
+	}
     tl.expires =  jiffies + msecs_to_jiffies(dur);
 	tl.function = unlockProc;
     add_timer(&tl);
