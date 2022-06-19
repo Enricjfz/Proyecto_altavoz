@@ -91,6 +91,7 @@ static int seq_release(struct inode *inode, struct file *filp) {
 //metodo que desbloquea a todos los procesos dormidos por la escritura del sonido
 static void unlockProc (struct  timer_list *tl){
    spin_lock_bh(&lock);
+   condition = 1;
    wake_up_interruptible(&info.lista_bloq);
    spkr_off();
    spin_unlock_bh(&lock);
@@ -98,9 +99,10 @@ static void unlockProc (struct  timer_list *tl){
 
 //Funcion auxiliar que programa el temporizador y duerme al proceso
 static int scheduleSound (char sonido []){
-	int block, freq, dur;
-    freq = (sonido[0] << 8) | sonido[1];
-	dur = (sonido[2] << 8) | sonido[3];
+	int block;
+	int freq, dur;
+    freq = ((uint16_t) (sonido[1] << 8)) | (uint16_t) sonido[0];
+    dur = (((uint16_t) sonido[3] << 8)) | (uint16_t) sonido[2];
 	printk(KERN_ALERT "Sonido, duracion: %d frequencia: %d\n",dur,freq);
 	spin_lock_bh(&lock);
 	if(freq > 0)
@@ -109,8 +111,9 @@ static int scheduleSound (char sonido []){
 	   spkr_on();
 	}
     tl.expires =  jiffies + msecs_to_jiffies(dur);
-	tl.function = unlockProc;
+	timer_setup(&tl, unlockProc,0);
     add_timer(&tl);
+	condition = 0;
     block = wait_event_interruptible(info.lista_bloq, condition != 0);
 	spin_unlock_bh(&lock);
 	if (block != 0){
@@ -131,6 +134,7 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 		int datos_no_copiados;
 		mutex_lock(&write); //exclusion mutua threads
 		copy = 0;
+		printk(KERN_ALERT "SONIDO VACIO %s\n",privateData->sonido);
 		while (count > copy) //mientras haya mas datos en el buffer de los escritos
 		{
             if(privateData->datos_copiados != 0)
@@ -143,30 +147,35 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 
 			  }
 			  else {
-
+               //hay menos de un sonido para escribir
 				datos_a_escribir = bytes_sonidos;
 			  }
 
 			}
 			else {
+				//no hay bytes previos guardados
 				int bytes_sonidos = count - copy;
 				if(bytes_sonidos >= 4){
+					//hay mas de un sonido
 					datos_a_escribir = 4;
+					printk(KERN_ALERT "Escribes 4 bytes de golpe\n");
 				}
 				else {
+					//hay menos de un sonido
 					datos_a_escribir = count - copy;
 				}
 			}
-		    datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir);
+		    datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir); //se copia del buffer de usuario
 			if (datos_no_copiados > 0)
 			{
                      return -EFAULT;
 			}
 			copy += datos_a_escribir;
 			privateData->datos_copiados += datos_a_escribir;
-			if(privateData->datos_copiados%4 == 0) //hay un sonido disponible
+			if(privateData->datos_copiados == 4) //hay un sonido disponible
 			{
 				printk(KERN_ALERT "se escribe en el dispositivo 4 bytes \n");
+				printk(KERN_ALERT "SONIDO: %s\n",privateData->sonido);
                 //se llama a función sonido y se bloquea proceso
 				scheduleSound(privateData->sonido);
 				privateData->datos_copiados = 0;
@@ -212,6 +221,7 @@ static int __init spkr_init(void) {
   module_class = class_create (THIS_MODULE,name_class);
   //dar de alta al dispositivo asociandola a la clase
   device_create(module_class,NULL,devID,NULL,fmt);
+  //se inicializan las colas, mutex del dispositivo
 	init_waitqueue_head(&info.lista_bloq);
 	mutex_init(&open);
 	mutex_init(&write);
