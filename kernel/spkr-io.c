@@ -11,14 +11,19 @@
 void spkr_on(void) {
     uint8_t tmp;
 	tmp = inb(PUERTO_B);
-	tmp = tmp| 3; // tmp OR 00000011  
-	outb(tmp,PUERTO_B);
+	if (tmp != (tmp | 3)) {
+ 		outb(tmp | 3,PUERTO_B);  // tmp OR 00000011  
+ 	}
+
+
+
 	printk(KERN_INFO "spkr ON\n");
 }
 //se desactivan los cualquiera de los ultimos bytes del puerto B
 void spkr_off(void) {
 	uint8_t tmp;
 	tmp = inb(PUERTO_B);
+	//Otra opcion uint8_t tmp = inb(0x61) & 0xFC; -> AND 11111100
 	tmp = tmp ^ 3; // tmp XOR 00000011  
 	outb(tmp,PUERTO_B);
 	printk(KERN_INFO "spkr OFF\n");
@@ -27,7 +32,7 @@ void spkr_off(void) {
 //funcion que dada una frecuencia escribe ese valor en el dispositivo
 void set_spkr_frequency(unsigned int frequency) {
     uint16_t Div;
-	uint8_t tmp;
+	//uint8_t tmp;
     unsigned long flags;
 	printk(KERN_ALERT "inicio set frequency \n");
 	Div = PIT_TICK_RATE / frequency;

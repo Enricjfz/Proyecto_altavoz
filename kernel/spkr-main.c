@@ -89,7 +89,7 @@ static int seq_release(struct inode *inode, struct file *filp) {
 }
 
 //metodo que desbloquea a todos los procesos dormidos por la escritura del sonido
-static void unlockProc (struct  timer_list *tl){
+static void unlockProc (struct timer_list *tl){
    spin_lock_bh(&lock);
    condition = 1;
    wake_up_interruptible(&info.lista_bloq);
@@ -104,18 +104,18 @@ static int scheduleSound (char sonido []){
     freq = ((uint16_t) (sonido[1] << 8)) | (uint16_t) sonido[0];
     dur = (((uint16_t) sonido[3] << 8)) | (uint16_t) sonido[2];
 	printk(KERN_ALERT "Sonido, duracion: %d frequencia: %d\n",dur,freq);
-	spin_lock_bh(&lock);
+	//spin_lock_bh(&lock);
 	if(freq > 0)
 	{
 	   set_spkr_frequency(freq);
 	   spkr_on();
 	}
     tl.expires =  jiffies + msecs_to_jiffies(dur);
-	timer_setup(&tl, unlockProc,0);
     add_timer(&tl);
+	//mod_timer(&tl, jiffies + msecs_to_jiffies(dur));
 	condition = 0;
     block = wait_event_interruptible(info.lista_bloq, condition != 0);
-	spin_unlock_bh(&lock);
+	//spin_unlock_bh(&lock);
 	if (block != 0){
 		printk(KERN_ALERT "-ERESTARTSYS\n");
 		return -ERESTARTSYS;
@@ -183,6 +183,7 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 
 			}
 		}
+		printk(KERN_INFO "intspkr wrote %d bytes\n", copy);
 		mutex_unlock(&write);
         return 0;
 }
@@ -221,8 +222,9 @@ static int __init spkr_init(void) {
   module_class = class_create (THIS_MODULE,name_class);
   //dar de alta al dispositivo asociandola a la clase
   device_create(module_class,NULL,devID,NULL,fmt);
-  //se inicializan las colas, mutex del dispositivo
+  //se inicializan las colas, mutex y el timer del dispositivo
 	init_waitqueue_head(&info.lista_bloq);
+	timer_setup(&tl, unlockProc,0);
 	mutex_init(&open);
 	mutex_init(&write);
 	spin_lock_init(&lock);
@@ -238,6 +240,7 @@ static void __exit spkr_exit(void) {
   unregister_chrdev_region(devID,count);
   mutex_destroy(&open);
   mutex_destroy(&write);
+  del_timer_sync(&tl);
   printk(KERN_ALERT "salida_exit\n");
 }
 

@@ -40,6 +40,7 @@ __used __section("__versions") = {
 	{ 0x75943e25, "i8253_lock" },
 	{ 0x15ba50a6, "jiffies" },
 	{ 0xd9a5ea54, "__init_waitqueue_head" },
+	{ 0x97934ecf, "del_timer_sync" },
 	{ 0xd35cce70, "_raw_spin_unlock_irqrestore" },
 	{ 0xcefb0c9f, "__mutex_init" },
 	{ 0x4dfa8d4b, "mutex_lock" },
@@ -70,4 +71,4 @@ __used __section("__versions") = {
 MODULE_INFO(depends, "");
 
 
-MODULE_INFO(srcversion, "32D8BE86CCD3CB69D27A6FF");
+MODULE_INFO(srcversion, "B9FDB0FF206F79BE7043F5D");
