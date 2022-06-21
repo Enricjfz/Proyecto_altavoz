@@ -13,7 +13,7 @@ Fichero header de spkr-io que contiene las declaraciones de funciones y constant
 
 void spkr_on(void);
 void spkr_off(void);
-void set_spkr_frequency(unsigned int frequency);
+void set_spkr_frequency(uint16_t frequency);
 
 
 #endif /*_SPKR_IO_H */

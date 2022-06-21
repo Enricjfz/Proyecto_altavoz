@@ -16,6 +16,7 @@
 
 
 
+
 MODULE_LICENSE("Dual BSD/GPL");
 
 
@@ -36,7 +37,7 @@ struct info_dispo {
 } info;
 
 typedef struct {
-  char sonido [4];
+  unsigned char sonido [4];
   int datos_copiados;
 } PrivateData;
 
@@ -93,17 +94,17 @@ static void unlockProc (struct timer_list *tl){
    spin_lock_bh(&lock);
    condition = 1;
    wake_up_interruptible(&info.lista_bloq);
-   spkr_off();
+   //spkr_off();
    spin_unlock_bh(&lock);
 } 
 
 //Funcion auxiliar que programa el temporizador y duerme al proceso
-static int scheduleSound (char sonido []){
-	int block;
-	int freq, dur;
-    freq = ((uint16_t) (sonido[1] << 8)) | (uint16_t) sonido[0];
+static int scheduleSound (unsigned char sonido []){
+    uint16_t freq, dur;
+	printk(KERN_ALERT "BYTE 0: %d  BYTE 1: %d BYTE 2: %d BYTE 3: %d\n",sonido[0],sonido[1], sonido[2], sonido[3]);
+    freq = (((uint16_t) sonido[1] << 8)) | (uint16_t) sonido[0];
     dur = (((uint16_t) sonido[3] << 8)) | (uint16_t) sonido[2];
-	printk(KERN_ALERT "Sonido, duracion: %d frequencia: %d\n",dur,freq);
+	printk(KERN_ALERT "Sonido, FRECUENCIA: %d DURACION: %d\n",freq,dur);
 	//spin_lock_bh(&lock);
 	if(freq > 0)
 	{
@@ -114,14 +115,22 @@ static int scheduleSound (char sonido []){
     add_timer(&tl);
 	//mod_timer(&tl, jiffies + msecs_to_jiffies(dur));
 	condition = 0;
-    block = wait_event_interruptible(info.lista_bloq, condition != 0);
-	//spin_unlock_bh(&lock);
-	if (block != 0){
+    if(wait_event_interruptible(info.lista_bloq, condition != 0) != 0) {
 		printk(KERN_ALERT "-ERESTARTSYS\n");
 		return -ERESTARTSYS;
 	} 
+	if(freq > 0) {
+		spkr_off();
+	}
 	return 1;
 } 
+
+static void clean_array(PrivateData * private) {
+	int i;
+	for (i = 0; i < 4; i++) {
+		private->sonido[i] = '\0';
+	}
+}
 
 static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
 	  printk(KERN_ALERT "seq_write\n"); //Depurar
@@ -131,7 +140,6 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 		int copy; //datos copiados
 		int datos_a_escribir; //bytes que se escriben
 		PrivateData *privateData = (PrivateData *)(filp -> private_data); //struct de sonido
-		int datos_no_copiados;
 		mutex_lock(&write); //exclusion mutua threads
 		copy = 0;
 		printk(KERN_ALERT "SONIDO VACIO %s\n",privateData->sonido);
@@ -165,11 +173,11 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
 					datos_a_escribir = count - copy;
 				}
 			}
-		    datos_no_copiados = copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir); //se copia del buffer de usuario
-			if (datos_no_copiados > 0)
-			{
-                     return -EFAULT;
+			printk(KERN_ALERT "DATOS A ESCRIBIR: %d\n",datos_a_escribir);
+		    if(copy_from_user(privateData->sonido + privateData->datos_copiados, buf, datos_a_escribir) > 0) { //se copia del buffer de usuario
+                return -EFAULT;
 			}
+			buf = buf + datos_a_escribir; //avanza el puntero
 			copy += datos_a_escribir;
 			privateData->datos_copiados += datos_a_escribir;
 			if(privateData->datos_copiados == 4) //hay un sonido disponible
@@ -179,13 +187,14 @@ static ssize_t seq_write(struct file *filp, const char __user *buf, size_t count
                 //se llama a función sonido y se bloquea proceso
 				scheduleSound(privateData->sonido);
 				privateData->datos_copiados = 0;
+				clean_array(privateData);
 				
 
 			}
 		}
 		printk(KERN_INFO "intspkr wrote %d bytes\n", copy);
 		mutex_unlock(&write);
-        return 0;
+        return copy;
 }
 
 static ssize_t seq_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos) {

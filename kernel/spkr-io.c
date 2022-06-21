@@ -30,7 +30,7 @@ void spkr_off(void) {
 }
 
 //funcion que dada una frecuencia escribe ese valor en el dispositivo
-void set_spkr_frequency(unsigned int frequency) {
+void set_spkr_frequency(uint16_t frequency) {
     uint16_t Div;
 	//uint8_t tmp;
     unsigned long flags;
