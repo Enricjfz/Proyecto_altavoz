@@ -24,8 +24,10 @@ void spkr_off(void) {
 	uint8_t tmp;
 	tmp = inb(PUERTO_B);
 	//Otra opcion uint8_t tmp = inb(0x61) & 0xFC; -> AND 11111100
-	tmp = tmp ^ 3; // tmp XOR 00000011  
-	outb(tmp,PUERTO_B);
+	if((tmp & 3) != 0) { //si ya estan a 0 no hace falta
+	  tmp = tmp ^ 3; // tmp XOR 00000011  
+	  outb(tmp,PUERTO_B);
+	}
 	printk(KERN_INFO "spkr OFF\n");
 }
 
