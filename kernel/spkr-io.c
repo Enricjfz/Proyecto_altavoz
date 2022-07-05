@@ -34,7 +34,6 @@ void spkr_off(void) {
 //funcion que dada una frecuencia escribe ese valor en el dispositivo
 void set_spkr_frequency(uint16_t frequency) {
     uint16_t Div;
-	//uint8_t tmp;
     unsigned long flags;
 	printk(KERN_ALERT "inicio set frequency \n");
 	Div = PIT_TICK_RATE / frequency;
@@ -44,13 +43,7 @@ void set_spkr_frequency(uint16_t frequency) {
 	outb((uint8_t) (Div >> 8),REGISTRO_DATOS);
 	raw_spin_unlock_irqrestore(&i8253_lock, flags);
 	printk(KERN_ALERT "fin set frequency \n");
-	/*
-	tmp = inb(0x61);
-	if(tmp != (tmp | 3)){
-			outb(PUERTO_B, tmp | 3);
-	}
-
-	*/
+	
 
 }
 

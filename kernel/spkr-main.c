@@ -364,7 +364,6 @@ static int __init spkr_init(void) {
   if(alloc_chrdev_region(&devID,firstminor,count,name) < 0){
      return -1;
   }
-  printk(KERN_ALERT "salida_chrdev\n");
   //creación del dispositivo
   cdev_init(&c, &fops);
   //asociarla con el identificador de dispositivo reservado previamente
@@ -389,6 +388,7 @@ static int __init spkr_init(void) {
   mutex_init(&open);
   mutex_init(&write);
   spin_lock_init(&lock);
+  printk(KERN_ALERT "salida_init\n");
   return 0;
 }
 
